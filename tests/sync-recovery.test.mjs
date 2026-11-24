@@ -18,6 +18,7 @@ function load(file, extra = {}, globals = {}) {
     window: { setTimeout: fn => { fn(); return 1; }, clearTimeout: noop },
     ...globals,
     require: id => id === 'obsidian' ? { normalizePath: x => x, TFile: MockFile, Platform: { isMobile: false } }
+      : id === './operator_file' ? { sweepStalledDownloadSessions: noop }
       : id.includes('helpers') ? helpers
       : id.includes('sync_log_manager') ? { SyncLogManager: { getInstance: () => logs } }
       : extra[id] || {} });
@@ -31,7 +32,9 @@ const { ConcurrencyLimiter } = load('src/lib/sync/concurrency_limiter.ts');
     '../../i18n/lang': { $: key => key }
   }, { WebSocket: { OPEN: 1 } });
   const p = {
-    syncState: { activeSyncContext: 'long-running' }, isSyncing: true,
+    syncState: { activeSyncContext: 'long-running' },
+    concurrencyLimiter: { getQueueStatus: () => ({ active: 1, queued: 0 }) },
+    noteSyncTasks: {}, fileSyncTasks: {}, folderSyncTasks: {}, configSyncTasks: {}, isSyncing: true,
     settings: { syncEnabled: true, configSyncEnabled: true },
     websocket: { ws: { readyState: 1, bufferedAmount: 0 } },
     fileDownloadSessions: new Map(),
@@ -281,3 +284,14 @@ console.log('PASS: queue recovery, mtime ACK release/page attribution/context ro
   fileOps.clearUploadQueue();
 }
 console.log('PASS: retransmission deduplication, late session errors, renewal, slot handoff and ACK cleanup');
+
+
+{
+  const { offlineDeletionNeedsConfirmation } = load('src/lib/sync/operator.ts');
+  assert.equal(offlineDeletionNeedsConfirmation(20, 180, 0), false, 'exactly 20 is within the absolute limit');
+  assert.equal(offlineDeletionNeedsConfirmation(21, 179, 0), true, '21 exceeds the absolute limit');
+  assert.equal(offlineDeletionNeedsConfirmation(15, 85, 0), false, 'exactly 15% is within the relative limit');
+  assert.equal(offlineDeletionNeedsConfirmation(16, 84, 0), true, '16% exceeds the relative limit');
+  assert.equal(offlineDeletionNeedsConfirmation(1, 0, 0), true, 'deleting the only file requires confirmation');
+  assert.equal(offlineDeletionNeedsConfirmation(0, 100, 1), true, 'folder deletion requires confirmation');
+}

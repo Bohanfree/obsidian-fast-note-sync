@@ -46,6 +46,32 @@ function confirmOfflineTombstoneUpload(plugin: FastSync, uploadCount: number): P
 }
 
 
+const OFFLINE_DELETE_COUNT_LIMIT = 20;
+const OFFLINE_DELETE_FRACTION_LIMIT = 0.15;
+
+export function offlineDeletionNeedsConfirmation(deletedFiles: number, remainingFiles: number, deletedFolders: number): boolean {
+  const fraction = deletedFiles / Math.max(1, remainingFiles + deletedFiles);
+  return deletedFiles > OFFLINE_DELETE_COUNT_LIMIT || fraction > OFFLINE_DELETE_FRACTION_LIMIT || deletedFolders > 0;
+}
+
+function confirmOfflineDeletion(plugin: FastSync, files: number, folders: number, percentage: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    new ConfirmModal(
+      plugin.app,
+      $("ui.offline_delete_guard.title"),
+      $("ui.offline_delete_guard.message", {
+        files: String(files), folders: String(folders), percentage: percentage.toFixed(1),
+      }),
+      () => resolve(true),
+      $("ui.offline_delete_guard.confirm"),
+      $("ui.button.cancel"),
+      true,
+      () => resolve(false),
+      false
+    ).open();
+  });
+}
+
 export const startupSync = (plugin: FastSync): void => {
   void handleSync(plugin, plugin.localStorageManager.getMetadata("isInitSync") as boolean);
 };
@@ -122,8 +148,8 @@ export function isSyncStalled(plugin: FastSync, ownerContext: string | undefined
     syncStallState.lastProgressAt = now;
     return false;
   }
-  const limiter = plugin.concurrencyLimiter as unknown as { activeKeys: { size: number }; queue: unknown[] };
-  const idle = limiter.activeKeys.size === 0 && limiter.queue.length === 0
+  const { active, queued } = plugin.concurrencyLimiter.getQueueStatus();
+  const idle = active === 0 && queued === 0
     && plugin.fileDownloadSessions.size === 0 && !plugin.isSyncRequesting;
   return idle && now - syncStallState.lastProgressAt > SYNC_STALL_RESTART_MS;
 }
@@ -155,7 +181,7 @@ function restartStalledSync(plugin: FastSync, intervalId?: number): void {
   plugin.uploadedChunksCount = 0;
   plugin.isSyncing = false;
   plugin.progressTracker.forceComplete();
-  plugin.updateStatusBar("Sync stalled, restarting…");
+  plugin.updateStatusBar($("ui.sync_stalled"));
   window.setTimeout(() => {
     if (plugin.websocket.isOpen && !plugin.isSyncing) {
       void handleSync(plugin, plugin.localStorageManager.getMetadata("isInitSync") as boolean);
@@ -342,9 +368,11 @@ export function checkSyncCompletion(plugin: FastSync, intervalId?: number, _sync
     }
 
     const detailText = plugin.progressTracker.getDetailText();
-    const finalStatusText = detailText ? `${statusText} · ${detailText}` : statusText;
+    const { active, queued } = plugin.concurrencyLimiter.getQueueStatus();
+    const queueText = $("ui.sync_queue", { active: String(active), queued: String(queued) });
+    const finalStatusText = [statusText, detailText, queueText].filter(Boolean).join(" · ");
 
-    plugin.updateStatusBar(finalStatusText, Math.min(overallPercentage, 99), 100);
+    plugin.updateStatusBar(finalStatusText, Math.min(overallPercentage, 99), 100, queued > 0 ? queueText : undefined);
   }
 }
 /**
@@ -1198,6 +1226,28 @@ export const handleSync = async function (plugin: FastSync, isLoadLastTime: bool
     // Yield to let the 100% progress message render before entering WebSocket send phase
     await sleep(0);
 
+    if (plugin.settings.offlineDeleteSyncEnabled) {
+      const syncAttachments = !plugin.settings.cloudPreviewEnabled || plugin.settings.cloudPreviewTypeRestricted;
+      const deletedFiles = delNotes.length + (syncAttachments ? delFiles.length : 0) + delConfigs.length;
+      const vaultFiles = plugin.app.vault.getFiles().length;
+      const fraction = deletedFiles / Math.max(1, vaultFiles + deletedFiles);
+      if (offlineDeletionNeedsConfirmation(deletedFiles, vaultFiles, delFolders.length)) {
+        const confirmed = await confirmOfflineDeletion(plugin, deletedFiles, delFolders.length, fraction * 100);
+        if (plugin.syncState.activeSyncContext !== context) return;
+        if (!confirmed) {
+          plugin.syncState.activeSyncContext = null;
+          plugin.progressTracker.forceComplete();
+          plugin.updateStatusBar($("ui.offline_delete_guard.paused"));
+          return;
+        }
+      }
+    }
+    if (plugin.syncState.activeSyncContext !== context) return;
+    if (!plugin.websocket.isOpen || isPluginUnloading) {
+      plugin.syncState.activeSyncContext = null;
+      return;
+    }
+
     // 设置发起请求状态位，防止 checkSyncCompletion 过早判定结束 (Set requesting flag to prevent premature completion detection)
     plugin.isSyncRequesting = true;
 
@@ -1494,6 +1544,7 @@ class BatchSendSession {
     entry.retries++;
     entry.timer = null;
     dump(`[BatchSync] ${this.action} batch ${idx} ack timeout, retry ${entry.retries}/3`);
+    this.plugin.updateStatusBar($("ui.sync_retry", { attempt: String(entry.retries) }));
     void this.sendBatch(idx, true);
   }
 

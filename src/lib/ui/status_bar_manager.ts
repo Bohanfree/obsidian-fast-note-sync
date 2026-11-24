@@ -170,7 +170,7 @@ export class StatusBarManager {
    * Classical update signature for backward compatibility.
    * 经典更新签名，用于向后兼容及零星单点调用。
    */
-  update(text: string, current?: number, total?: number): void {
+  update(text: string, current?: number, total?: number, queueLabel?: string): void {
     if (!this.statusBarItem) return;
 
     if (!text && current === undefined && total === undefined) {
@@ -193,7 +193,7 @@ export class StatusBarManager {
       }
 
       if (this.statusBarFill) this.statusBarFill.setCssProps({ width: `${percentage}%` });
-      if (this.statusBarPct) this.statusBarPct.setText(`${percentage}%`);
+      if (this.statusBarPct) this.statusBarPct.setText(queueLabel ? `${percentage}% · ${queueLabel}` : `${percentage}%`);
       this.statusBarItem.setAttribute("aria-label", text);
 
       if (percentage === 100) {

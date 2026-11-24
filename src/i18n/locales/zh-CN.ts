@@ -2,6 +2,13 @@
 
 
 export default {
+  "ui.offline_delete_guard.title": "确认离线删除",
+  "ui.offline_delete_guard.message": "本轮将向服务器同步 {files} 个文件和 {folders} 个文件夹的删除。待删除文件占库内文件（含待删除项）的 {percentage}%。是否继续？",
+  "ui.offline_delete_guard.confirm": "同步删除",
+  "ui.offline_delete_guard.paused": "同步已暂停，等待确认离线删除。",
+  "ui.sync_queue": "进行中 {active}，排队 {queued}",
+  "ui.sync_stalled": "同步停滞，正在重试…",
+  "ui.sync_retry": "服务器确认超时，正在重试 {attempt}/3。",
   "fns.desc": "可私有化部署，多端笔记,附件,配置实时同步&备份插件， 支持 Mac、Windows、Android、iOS 等平台，并提供 multi-language 支持。",
 
   "setting.tab.general": "通用",

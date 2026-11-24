@@ -15,6 +15,7 @@ vm.runInNewContext(code, { module, exports: module.exports, console,
   window: { setTimeout: fn => { fn(); return 1; } },
   require: id => id === 'obsidian' ? { TFile, normalizePath: p => p, Platform: { isMobile: false } }
     : id.includes('file_cloud_preview') ? { FileCloudPreview: { isRestrictedType: ext => ext === '.png' } }
+    : id === './remote_path_guard' ? { blockAliasedRemoteMutation: () => false }
     : id.includes('helpers') ? new Proxy({ isPathExcluded: () => false, isLargeBinarySyncRisk: () => false,
         checkAndNotifyCaseConflict: () => false, getPluginDir: () => 'plugin',
         vaultDelete: (vault, f) => vault.delete(f) }, { get: (t, k) => t[k] ?? noop })
@@ -29,6 +30,7 @@ function fixture(restricted) {
     settings: { syncEnabled: true, cloudPreviewEnabled: true, cloudPreviewTypeRestricted: restricted },
     app: { vault: { getFileByPath: () => file, delete: async f => deleted.push(f.path), trash: async f => deleted.push(f.path),
       readBinary: async () => new ArrayBuffer(1), modifyBinary: async (f, _b, o) => modified.push(o) } },
+    syncState: { pendingFilePushPageIndex: new Map() },
     lockManager: { withLock: async (_k, fn) => fn() },
     addIgnoredFile: noop, removeIgnoredFile: noop, lastSyncPathDeleted: new Set(), lastSyncMtime: new Map(),
     fileHashManager: { removeFileHash: noop }, concurrencyLimiter: { releaseSlot: noop },

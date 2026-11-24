@@ -2,6 +2,13 @@
 
 
 export default {
+  "ui.offline_delete_guard.title": "Confirm offline deletions",
+  "ui.offline_delete_guard.message": "This sync will send deletions for {files} files ({percentage}% of the vault, including pending deletions) and {folders} folders to the server. Continue?",
+  "ui.offline_delete_guard.confirm": "Send deletions",
+  "ui.offline_delete_guard.paused": "Sync paused. Offline deletions are awaiting confirmation.",
+  "ui.sync_queue": "Active {active}, queued {queued}",
+  "ui.sync_stalled": "Sync stalled. Restarting…",
+  "ui.sync_retry": "Waiting for server acknowledgment. Retry {attempt}/3.",
     "ui.conflict.diff_skipped": "Large file: line-by-line comparison was skipped. Choose a version above or edit the text directly.",
   "fns.desc": "A plugin for private deployment that enables real-time sync & backup of notes, attachments, and configurations across multiple devices. Supports Mac, Windows, Android, iOS, and more, with multi-language support.",
 

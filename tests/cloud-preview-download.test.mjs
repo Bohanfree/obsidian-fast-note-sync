@@ -17,6 +17,7 @@ for (const initialized of [false, true]) {
     let slots = 0, completed = 0, sends = 0;
     const plugin = {
       settings: { syncEnabled: true, cloudPreviewEnabled: true, cloudPreviewTypeRestricted: restricted },
+      app: { vault: { getFileByPath: () => null } },
       pendingFileDeleteAcks: new Map(),
       localStorageManager: { getMetadata: () => initialized },
       recordSyncCompleted: () => completed++,

@@ -22,7 +22,7 @@ import { EventManager } from "./lib/utils/events_manager";
 import { WebSocketManager } from "./lib/sync/websocket_manager";
 import { MenuManager } from "./lib/ui/menu_manager";
 import { LockManager } from "./lib/sync/lock_manager";
-import { handleSync, cancelSync } from "./lib/sync/operator";
+import { handleSync, cancelSync, startupSync } from "./lib/sync/operator";
 import { cleanupConfigReloadTimer } from "./lib/sync/operator_config";
 import { HttpApiService } from "./lib/api/http_api_service";
 import { SyncState } from "./lib/sync/sync_state";
@@ -338,9 +338,9 @@ export default class FastSync extends Plugin {
     this.menuManager.updateRibbonIcon(status)
   }
 
-  updateStatusBar(text: string, current?: number, total?: number) {
+  updateStatusBar(text: string, current?: number, total?: number, queueLabel?: string) {
     if (this.statusBarManager) {
-      this.statusBarManager.update(text, current, total);
+      this.statusBarManager.update(text, current, total, queueLabel);
     }
   }
 
@@ -633,6 +633,11 @@ export default class FastSync extends Plugin {
 
       // 从本地存储还原当前处于手动合并冲突锁定状态的文件路径
       this.syncState.conflictedPaths = this.localStorageManager.getConflictedPaths()
+    })
+    this.registerObsidianProtocolHandler("fast-note-sync/sync", () => {
+      this.app.workspace.onLayoutReady(() => {
+        startupSync(this)
+      })
     })
   }
 

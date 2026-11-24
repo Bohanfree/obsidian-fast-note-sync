@@ -147,7 +147,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   cloudPreviewRemoteUrl: "",
   cloudPreviewAutoDeleteLocal: false,
   cloudPreviewDynamicAttachment: false,
-  offlineDeleteSyncEnabled: false,
+  offlineDeleteSyncEnabled: true,
   syncUpdateDelay: 0,
   isShowNotice: true,
   manualSyncEnabled: false,

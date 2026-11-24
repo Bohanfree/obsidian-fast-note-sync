@@ -322,6 +322,10 @@ export const configIsPathExcluded = function (relativePath: string, plugin: Fast
   // Hard exclude the plugin's own database and cache files; do not sync them under any circumstances
   const pluginSelfDir = getPluginDir(plugin)
   if (
+    normalizedPath === `${plugin.app.vault.configDir}/workspace.json` ||
+    normalizedPath === `${plugin.app.vault.configDir}/workspace-mobile.json` ||
+    normalizedPath === `${pluginSelfDir}/temp-chunks` ||
+    normalizedPath.startsWith(`${pluginSelfDir}/temp-chunks/`) ||
     normalizedPath === `${pluginSelfDir}/configHashMap.json` ||
     normalizedPath === `${pluginSelfDir}/fileHashMap.json` ||
     normalizedPath === `${pluginSelfDir}/syncHashMap.json` ||

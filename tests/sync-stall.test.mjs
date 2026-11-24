@@ -10,7 +10,8 @@ const code = ts.transpileModule(fs.readFileSync('src/lib/sync/operator.ts', 'utf
 }).outputText;
 vm.runInNewContext(code, { module, exports: module.exports, console, window: { setTimeout: () => 1, clearTimeout: noop },
   require: id => id === 'obsidian' ? { normalizePath: x => x, TFile: class {}, Platform: {} }
-    : id.includes('helpers') ? { dump: noop }
+    : id === './operator_file' ? { sweepStalledDownloadSessions: noop }
+      : id.includes('helpers') ? { dump: noop }
     : id.includes('sync_log_manager') ? { SyncLogManager: { getInstance: () => ({ addOrUpdateLog: noop }) } }
     : id.includes('i18n') ? { $: k => k } : {} });
 const { isSyncStalled, SYNC_STALL_RESTART_MS } = module.exports;
@@ -20,7 +21,7 @@ const mk = () => ({
   folderSyncTasks: { completed: 0 }, configSyncTasks: { completed: 0 },
   uploadedChunksCount: 0, downloadedChunksCount: 0,
   progressTracker: { getOverallPct: () => 40 },
-  concurrencyLimiter: { activeKeys: new Set(), queue: [] },
+  concurrencyLimiter: { activeKeys: new Set(), queue: [], getQueueStatus() { return { active: this.activeKeys.size, queued: this.queue.length }; } },
   fileDownloadSessions: new Map(), isSyncRequesting: false,
 });
 const t0 = 1_000_000;
@@ -66,7 +67,8 @@ vm.runInNewContext(integrationCode, {
   WebSocket: { OPEN: 1 },
   window: { setTimeout: () => 1, clearInterval: noop },
   require: id => id === 'obsidian' ? { normalizePath: x => x, TFile: class {}, TFolder: class {} }
-    : id.includes('helpers') ? { dump: noop }
+    : id === './operator_file' ? { sweepStalledDownloadSessions: noop }
+      : id.includes('helpers') ? { dump: noop }
     : id.includes('sync_log_manager') ? { SyncLogManager: { getInstance: () => ({ addOrUpdateLog: noop }) } }
     : id.includes('i18n') ? { $: key => key }
     : {},
@@ -79,7 +81,7 @@ const longRunning = {
   settings: { syncEnabled: true, configSyncEnabled: false, isShowNotice: false },
   noteSyncTasks: { completed: 4, failed: 0 }, fileSyncTasks: { completed: 2, failed: 0 },
   folderSyncTasks: { completed: 0, failed: 0 }, configSyncTasks: { completed: 0, failed: 0 },
-  concurrencyLimiter: { activeKeys: new Set(['uploading.bin']), queue: [] },
+  concurrencyLimiter: { activeKeys: new Set(['uploading.bin']), queue: [], getQueueStatus() { return { active: this.activeKeys.size, queued: this.queue.length }; } },
   fileDownloadSessions: new Map(), isSyncRequesting: false, isSyncing: true,
   websocket: { ws: { readyState: 1, bufferedAmount: 0 }, isOpen: true },
   progressTracker: { getOverallPct: () => 42, getDetailText: () => '',

@@ -22,7 +22,8 @@ export class ConfirmModal extends Modal {
         confirmLabel?: string,
         cancelLabel?: string,
         isWarning: boolean = true,
-        onCancel?: () => void
+        onCancel?: () => void,
+        private readonly confirmOnEnter: boolean = true
     ) {
         super(app);
         this.titleText = title;
@@ -72,6 +73,7 @@ export class ConfirmModal extends Modal {
             );
 
         // 绑定键盘回车键确认 / Bind Enter key to confirm
+        if (!this.confirmOnEnter) return;
         this.scope.register([], "Enter", (evt) => {
             evt.preventDefault();
             this.decided = true;

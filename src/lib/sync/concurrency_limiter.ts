@@ -17,6 +17,10 @@ export class ConcurrencyLimiter {
         this.plugin = plugin;
     }
 
+    public getQueueStatus() {
+        return { active: this.activeKeys.size, queued: this.queue.length };
+    }
+
     /**
      * 等待并获取一个并发槽位
      * @param key 任务标识（通常是文件路径，或者是生成的随机 ID）

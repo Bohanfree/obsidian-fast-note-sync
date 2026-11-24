@@ -20,7 +20,8 @@ function load(file) {
   vm.runInNewContext(code, { module, exports: module.exports, console,
     window: { setTimeout: fn => { fn(); return 1; } },
     require: id => id === 'obsidian' ? { TFile, TFolder, normalizePath: x => x.replace(/\\/g, '/') }
-      : id.includes('helpers_obsidian_bypass') ? { ...helpers, vaultDelete: forbidden }
+      : id === './remote_path_guard' ? { blockAliasedRemoteMutation: () => false }
+    : id.includes('helpers_obsidian_bypass') ? { ...helpers, vaultDelete: forbidden }
       : id.includes('helpers') ? { ...helpers, vaultDelete: forbidden }
       : id.includes('sync_log_manager') ? { SyncLogManager: { getInstance: () => ({ addLog: noop }) } }
       : {} });
@@ -43,6 +44,7 @@ function fixture(kind, fail = false) {
     app: { vault: { getFileByPath: () => item, getAbstractFileByPath: () => item,
       trash, delete: forbidden,
       adapter: { exists: async () => true, trashLocal: path => trash(path, false), remove: forbidden } } },
+    syncState: { pendingFilePushPageIndex: new Map() },
     lockManager: { withLock: async (_, fn) => fn() },
     addIgnoredFile: noop, removeIgnoredFile: noop, ignoredConfigFiles: new Set(),
     lastSyncPathDeleted: new Set(), lastSyncMtime: new Map(), pendingNoteModifies: new Map(),
