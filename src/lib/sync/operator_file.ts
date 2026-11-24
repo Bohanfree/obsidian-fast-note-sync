@@ -1459,7 +1459,6 @@ const handleFileChunkDownloadComplete = async function (session: FileDownloadSes
     if (session.tempDir) await clearTempChunksDir(plugin, session.sessionId)
     releaseDownloadOwner(plugin, session)
     plugin.downloadedFilesCount++
-    plugin.progressTracker.recordDownloadComplete('file');
     plugin.recordSyncCompleted('file', session.pageIndex)
   } catch (e) {
     dumpError(`Error completing file download for ${session.path}`, e)
